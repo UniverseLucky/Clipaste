@@ -62,27 +62,11 @@ struct SettingsView: View {
 
         HStack(spacing: 0) {
             if isSidebarVisible {
-                ScrollView {
-                    VStack(spacing: 6) {
-                        ForEach(SettingsTab.allCases) { tab in
-                            Button {
-                                selectedTab = tab
-                            } label: {
-                                SidebarLabel(
-                                    tab: tab,
-                                    isSelected: selectedTab == tab,
-                                    accentColor: appAccentColor,
-                                    showsUpdateBadge: tab == .about && appUpdateViewModel.shouldShowUpdateBadge
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 16)
-                }
+                SettingsSidebar(
+                    selectedTab: $selectedTab,
+                    accentColor: appAccentColor,
+                    showsUpdateBadge: appUpdateViewModel.shouldShowUpdateBadge
+                )
                 .settingsScrollChromeHidden()
                 .settingsTopEdgeEffectHidden()
                 .frame(width: 198)
@@ -123,69 +107,6 @@ struct SettingsView: View {
                     isSidebarVisible.toggle()
                 }
             }
-        }
-    }
-}
-
-// MARK: - Sidebar Label
-
-private struct SidebarLabel: View {
-    let tab: SettingsTab
-    let isSelected: Bool
-    let accentColor: AppAccentColor
-    let showsUpdateBadge: Bool
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var selectedContentColor: Color {
-        SettingsPalette.sidebarSelectionAccent(accentColor, for: colorScheme)
-    }
-
-    private var selectedFillColor: Color {
-        SettingsPalette.sidebarSelectionFill(accentColor, for: colorScheme)
-    }
-
-    var body: some View {
-        Label {
-            Text(tab.localizedTitle)
-                .lineLimit(1)
-                .foregroundStyle(isSelected ? selectedContentColor : .primary)
-        } icon: {
-            Image(systemName: tab.iconName)
-                .font(.system(size: 14, weight: .medium))
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(isSelected ? selectedContentColor : .secondary)
-                .frame(width: 16)
-                .overlay(alignment: .topTrailing) {
-                    if showsUpdateBadge {
-                        Circle()
-                            .fill(Color(nsColor: .systemRed))
-                            .frame(width: 6, height: 6)
-                            .overlay {
-                                Circle()
-                                    .stroke(
-                                        isSelected ? selectedFillColor : Color(nsColor: .controlBackgroundColor),
-                                        lineWidth: 1
-                                    )
-                            }
-                            .offset(x: 2, y: -1)
-                    }
-                }
-        }
-        .font(.system(size: 14, weight: .medium))
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(Rectangle())
-        .background {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isSelected ? selectedFillColor : Color.clear)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(
-                            isSelected ? SettingsPalette.sidebarSelectionBorder(accentColor, for: colorScheme) : Color.clear,
-                            lineWidth: 1
-                        )
-                }
         }
     }
 }
