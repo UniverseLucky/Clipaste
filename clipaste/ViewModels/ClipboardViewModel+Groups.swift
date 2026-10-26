@@ -16,11 +16,16 @@ extension ClipboardViewModel {
     }
 
     func loadCustomGroups() {
-        // 分组数据量极小,直接在 MainActor 用 mainContext 同步读取,
-        // 避免 @ModelActor(Background QoS) 读被 MainActor(user-interactive) await
-        // 产生的优先级反转 (Hang Risk)。
-        let latestGroups = StorageManager.shared.fetchAllGroupsOnMain()
-        applyCustomGroups(latestGroups)
+        // 不能在主线程用 mainContext 同步读：数据量虽小，但要和后台查询抢同一组 SQLite 连接，
+        // 连续复制后数据库繁忙时会把主线程卡住数秒（呼出面板也会跟着卡住）。
+        // fetchGroups 经 detachedRead 读取，同样规避了优先级反转。
+        groupLoadGeneration &+= 1
+        let generation = groupLoadGeneration
+        Task { @MainActor [weak self] in
+            let latestGroups = await StorageManager.shared.fetchGroups()
+            guard let self, generation == self.groupLoadGeneration else { return }
+            self.applyCustomGroups(latestGroups)
+        }
     }
 
     func applyCustomGroups(_ latestGroups: [ClipboardGroupItem]) {

@@ -8,14 +8,23 @@ extension ClipboardMonitor {
         _ operation: @escaping @Sendable () async -> Void
     ) {
         let taskID = UUID()
+        let previousTask = lastPersistenceTask
+        // 串行落库：连续复制时按复制顺序依次入库，同一时刻只有一条采集在等数据库，
+        // 不会并发地把协作线程池全部堵在 SQLite 上。
         let task = Task.detached(priority: .utility) {
+            await previousTask?.value
             await operation()
         }
         persistenceTasks[taskID] = task
+        lastPersistenceTask = task
 
         Task { @MainActor [weak self] in
             await task.value
-            self?.persistenceTasks.removeValue(forKey: taskID)
+            guard let self else { return }
+            self.persistenceTasks.removeValue(forKey: taskID)
+            if self.lastPersistenceTask == task {
+                self.lastPersistenceTask = nil
+            }
         }
     }
 

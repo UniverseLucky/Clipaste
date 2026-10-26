@@ -7,6 +7,8 @@ import SwiftData
 extension ClipboardRuntimeStore {
     /// 签名比对间隔内最多追踪的本地记录变更条数，超出后按外部变化处理。
     static let maximumTrackedLocalRecordHashes = 512
+    /// RemoteChange 合并窗口：窗口内的连续保存只触发一次首屏快照比对。
+    static let remoteImportRepairDebounce: Duration = .milliseconds(400)
 
     enum Keys {
         static let syncEnabled = "enable_icloud_sync"

@@ -59,29 +59,6 @@ extension StorageManager {
         }
     }
 
-    /// UI 驱动的分组读取(数据量极小)。
-    /// 直接在 MainActor 上读 `mainContext`,避免 MainActor await
-    /// `@ModelActor` (Background QoS) 造成的优先级反转 (Hang Risk)。
-    @MainActor
-    func fetchAllGroupsOnMain() -> [ClipboardGroupItem] {
-        let context = container.mainContext
-        let descriptor = FetchDescriptor<ClipboardGroupModel>(
-            predicate: #Predicate<ClipboardGroupModel> { group in
-                group.deletedAt == nil
-            },
-            sortBy: [SortDescriptor(\.sortOrder, order: .forward)]
-        )
-        let records = (try? context.fetch(descriptor)) ?? []
-        return records.map {
-            ClipboardGroupItem(
-                id: $0.id,
-                name: $0.name,
-                systemIconName: $0.resolvedSystemIconName,
-                sortOrder: $0.sortOrder
-            )
-        }.uniquedByID()
-    }
-
     func fetchItem(hash: String) async -> ClipboardItem? {
         let container = self.container
         let snapshot = await detachedRead { () -> ClipboardRecordSnapshot? in

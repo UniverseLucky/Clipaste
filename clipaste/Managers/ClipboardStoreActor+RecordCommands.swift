@@ -2,6 +2,8 @@ import Foundation
 import SwiftData
 
 extension ClipboardStoreActor {
+    /// 返回本次是否新建了记录。`preservesExistingAppIconData` 为 true 时，已存在的记录不覆盖图标数据。
+    @discardableResult
     func upsert(
         hash: String,
         text: String?,
@@ -9,6 +11,7 @@ extension ClipboardStoreActor {
         appName: String?,
         appIconDominantColorHex: String?,
         appIconData: Data?,
+        preservesExistingAppIconData: Bool = false,
         type: String,
         rtfData: Data?,
         richTextArchiveData: Data?,
@@ -19,7 +22,7 @@ extension ClipboardStoreActor {
         sourceDeviceName: String?,
         captureMethodRawValue: String,
         captureSessionID: UUID?
-    ) {
+    ) -> Bool {
         let descriptor = FetchDescriptor<ClipboardRecord>(
             predicate: #Predicate<ClipboardRecord> { record in
                 record.contentHash == hash
@@ -30,6 +33,7 @@ extension ClipboardStoreActor {
             let now = Date()
 
             let existingRecords = try modelContext.fetch(descriptor)
+            let didInsert = existingRecords.isEmpty
 
             if let existingRecord = existingRecords.sorted(by: shouldPreferSurvivor).first {
                 existingRecord.timestamp = now
@@ -37,7 +41,7 @@ extension ClipboardStoreActor {
                 existingRecord.appBundleID = appID
                 existingRecord.appLocalizedName = appName
                 existingRecord.appIconDominantColorHex = appIconDominantColorHex
-                if let appIconData {
+                if let appIconData, preservesExistingAppIconData == false {
                     existingRecord.appIconData = appIconData
                 }
                 existingRecord.sourcePlatformRawValue = sourcePlatformRawValue
@@ -118,8 +122,10 @@ extension ClipboardStoreActor {
                     "kind": ClipboardRecordChangeKind.upsert.rawValue
                 ]
             )
+            return didInsert
         } catch {
             print("❌ [ClipboardStoreActor] 写入失败: \(error)")
+            return false
         }
     }
 

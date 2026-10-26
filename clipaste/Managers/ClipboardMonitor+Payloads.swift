@@ -117,19 +117,17 @@ extension ClipboardMonitor {
             from: imageData,
             maxPixelSize: ClipboardImagePreviewPolicy.storedPreviewMaxPixelSize
         )
-        let recordExists = await storage.recordExists(hash: contentHash)
         // 已存在的 hash 走"置顶"路径，不再重复写入相同的 PNG 图标数据 —— 这块
         // 走 externalStorage，每次写都要重新落盘，对长时间运行的菜单栏应用是
-        // 显著的累计 IO。
-        let iconDataToPersist: Data? = recordExists ? nil : appIconData
-
-        await storage.upsertRecordAndWait(
+        // 显著的累计 IO。是否已存在由 upsert 在同一次查询里判断，不再单独查一遍库。
+        let didInsert = await storage.upsertRecordAndWait(
             hash: contentHash,
             text: nil,
             appID: payload.appID,
             appName: payload.appName,
             appIconDominantColorHex: appIconDominantColorHex,
-            appIconData: iconDataToPersist,
+            appIconData: appIconData,
+            preservesExistingAppIconData: true,
             type: ClipboardContentType.image.rawValue,
             previewImageData: previewData,
             imageData: imageData,
@@ -140,7 +138,7 @@ extension ClipboardMonitor {
             captureSessionID: payload.captureSessionID
         )
 
-        guard recordExists == false else {
+        guard didInsert else {
             return
         }
 
@@ -154,18 +152,15 @@ extension ClipboardMonitor {
         appIconData: Data?,
         shouldFetchLinkMetadata: Bool
     ) async {
-        // 同样走"已存在则跳过 icon 写入"。文本路径之前不查 recordExists，所以
-        // 每次复制都把同一份 App icon PNG 重新落盘一次。
-        let recordExists = await storage.recordExists(hash: payload.hash)
-        let iconDataToPersist: Data? = recordExists ? nil : appIconData
-
+        // 同样走"已存在则跳过 icon 写入"，避免每次复制都把同一份 App icon PNG 重新落盘一次。
         await storage.upsertRecordAndWait(
             hash: payload.hash,
             text: payload.text,
             appID: payload.appID,
             appName: payload.appName,
             appIconDominantColorHex: appIconDominantColorHex,
-            appIconData: iconDataToPersist,
+            appIconData: appIconData,
+            preservesExistingAppIconData: true,
             type: payload.type,
             rtfData: payload.rtfData,
             richTextArchiveData: payload.richTextArchive?.encodedData(),

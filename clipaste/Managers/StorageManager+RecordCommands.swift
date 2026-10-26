@@ -2,13 +2,6 @@ import Foundation
 import SwiftData
 
 extension StorageManager {
-    func recordExists(hash: String) async -> Bool {
-        let actor = storeActor
-        return await detachedRead {
-            await actor.recordExists(hash: hash)
-        }
-    }
-
     nonisolated
     func upsertRecord(
         hash: String,
@@ -52,6 +45,8 @@ extension StorageManager {
         }
     }
 
+    /// 返回本次是否新建了记录；已存在的记录只被刷新/置顶。
+    @discardableResult
     nonisolated
     func upsertRecordAndWait(
         hash: String,
@@ -60,6 +55,7 @@ extension StorageManager {
         appName: String?,
         appIconDominantColorHex: String? = nil,
         appIconData: Data? = nil,
+        preservesExistingAppIconData: Bool = false,
         type: String,
         rtfData: Data? = nil,
         richTextArchiveData: Data? = nil,
@@ -70,15 +66,16 @@ extension StorageManager {
         sourceDeviceName: String?,
         captureMethodRawValue: String,
         captureSessionID: UUID? = nil
-    ) async {
-        guard acceptsNewTasks else { return }
-        await storeActor.upsert(
+    ) async -> Bool {
+        guard acceptsNewTasks else { return false }
+        return await storeActor.upsert(
             hash: hash,
             text: text,
             appID: appID,
             appName: appName,
             appIconDominantColorHex: appIconDominantColorHex,
             appIconData: appIconData,
+            preservesExistingAppIconData: preservesExistingAppIconData,
             type: type,
             rtfData: rtfData,
             richTextArchiveData: richTextArchiveData,

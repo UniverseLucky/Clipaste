@@ -9,7 +9,10 @@ extension ClipboardRuntimeStore {
     func scheduleRemoteImportRepair() {
         remoteRepairTask?.cancel()
         remoteRepairTask = Task { [weak self] in
-            guard let self else { return }
+            // RemoteChange 对本进程的每次保存都会发出（录入、高亮补全各一次），连续复制时
+            // 先合并成一次，避免每次保存都并发跑一遍首屏快照查询、把数据库和线程池压满。
+            try? await Task.sleep(for: Self.remoteImportRepairDebounce)
+            guard let self, Task.isCancelled == false else { return }
 
             // Single tail-pass catches CloudKit deliveries that finish a
             // short moment after eventChanged fires; the no-op signature

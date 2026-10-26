@@ -118,20 +118,4 @@ actor ClipboardStoreActor {
 
         return ClipboardRecordSnapshot.makeFromRecord(record)
     }
-
-    func recordExists(hash: String) -> Bool {
-        var descriptor = FetchDescriptor<ClipboardRecord>(
-            predicate: #Predicate<ClipboardRecord> { record in
-                record.contentHash == hash
-            }
-        )
-        descriptor.fetchLimit = 1
-
-        do {
-            return try modelContext.fetch(descriptor).first != nil
-        } catch {
-            print("❌ [ClipboardStoreActor] 查询失败: \(error)")
-            return false
-        }
-    }
 }

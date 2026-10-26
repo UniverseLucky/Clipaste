@@ -123,6 +123,7 @@ final class ClipboardViewModel {
     var isPanelPresentationActive = false
     var needsReloadOnNextPresentation = false
     var dataLoadGeneration: UInt = 0
+    @ObservationIgnored var groupLoadGeneration: UInt = 0
     var loadedHistoryCount = 0
     var hasLoadedFullHistory = false
     /// 已按范围直查补齐过的筛选范围。items 每次变化都会重新过滤，
